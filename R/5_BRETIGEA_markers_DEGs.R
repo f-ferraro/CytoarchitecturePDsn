@@ -336,7 +336,7 @@ for (n in as.character(studies)){
 datCor <- lapply(datExp, function(x)
   x <- cor(t(x),t(x)))
 
-bratigea <- list()
+BRETIGEA <- list()
 
 for (study in names(ct)){
   annotationb <- as.data.frame(ct2[[study]]) #
@@ -344,18 +344,18 @@ for (study in names(ct)){
   annotationb$mkr <- NULL
   names(annotationb) <- "Cell"
   
-  tiff(paste0(study, "BRATIGEA.tiff"), units = "in", res = 300, height = 8, width = 8)   
+  tiff(paste0(study, "BRETIGEA.tiff"), units = "in", res = 300, height = 8, width = 8)   
   pheatmap(datCor[[study]],
            annotation_col = annotationb,
            cluster_rows = T,
            cluster_cols = T,
            show_rownames = F,
            show_colnames = F, 
-           main = paste0("BRATIGEA\nmarkers ",study))
+           main = paste0("BRETIGEA\nmarkers ",study))
   dev.off()
 }
 
-rm(list=setdiff(ls(), "bratigea"))
+rm(list=setdiff(ls(), "BRETIGEA"))
 
 ############################################################################################################
 metadataall <- read.csv("../2resources/metadatall_predsex.csv")
