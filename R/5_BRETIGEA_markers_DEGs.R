@@ -76,7 +76,7 @@ for (type in unique(mrk$cell)){
     
     for (studies in names(datExp)){
       effect[[nmarker]][[studies]]<- list()
-
+      
       pca <- subdatExp[[studies]]
       PoV <- (pca$sdev^2/sum(pca$sdev^2))[1]
       
@@ -116,7 +116,7 @@ ggplot(effect[as.numeric(as.character(effect$nmark))<150,], aes(as.numeric(as.ch
   # theme(axis.text=element_text(size=5))+
   theme_classic(base_size = 10)
 dev.off()
-# save.image("../3results/varianceBR.RData")
+save.image("../3results/varianceBR.RData")
 load("../3results/varianceBR.RData")
 ## Marker quality control step
 # To further ensure the marker quality, we produce the correlation matrix between the markers.
@@ -289,141 +289,122 @@ for (study in names(datCor)){
            main = study)
 }
 dev.off()
-rm(list=ls())
-
-#############################################################################################
-################# Correlation among sn_markers and br_markers by study ######################
-#############################################################################################
-metadataall <- read.csv("../2resources/metadatall_predsex.csv")
-totalmatrix <- read.csv("../2resources/totalmatrix.csv", row.names=1)
-totalmatrix <- as.data.frame(totalmatrix)
-totalmatrix$Gene <- rownames(totalmatrix)
-
-studies <- unique((as.character(metadataall$GEO_series)))
-
-totalmatrix <- (t(totalmatrix))
-
-
-metastudy <- list()
-datExp <- list()
-
-# BR markers cor plots
-ct <- readRDS("~/Scrivania/github/3results/selectedMarkers.rds")
-ct2 <- lapply(ct, bind_cols)
-ct2 <- lapply(ct2, function(x){
-  x<- as.data.frame(x)
-  x <- pivot_longer(x, -0, names_to="Cell", values_to="mkr")
-  x<- as.data.frame(x)
-  return(x)
-})
-
-
-
-for (n in as.character(studies)){
-  meta <- subset(metadataall, metadataall$GEO_series == n)
-  mt <- subset(totalmatrix, rownames(totalmatrix) %in% meta$ID)
-  mt <- as.data.frame(t(mt))
-  mt <- na.omit(mt)
-  mt[,1:ncol(mt)] <- as.matrix(sapply(na.omit(mt[,1:ncol(mt)]), as.character))  
-  mt[,1:ncol(mt)] <- as.matrix(sapply(na.omit(mt[,1:ncol(mt)]), as.numeric))  
-  metastudy[[paste(n, sep="")]] <- meta
-  datExp[[paste(n, sep="")]] <- as.data.frame(mt)
-  datExp[[paste(n, sep="")]] <- datExp[[paste(n, sep="")]][rownames(datExp[[paste(n, sep="")]]) %in% ct2[[n]]$mkr,]
-  rm(mt, meta)
-}
-
-
-datCor <- lapply(datExp, function(x)
-  x <- cor(t(x),t(x)))
-
-BRETIGEA <- list()
-
-for (study in names(ct)){
-  annotationb <- as.data.frame(ct2[[study]]) #
-  rownames(annotationb) <- annotationb$mkr
-  annotationb$mkr <- NULL
-  names(annotationb) <- "Cell"
-  
-  tiff(paste0(study, "BRETIGEA.tiff"), units = "in", res = 300, height = 8, width = 8)   
-  pheatmap(datCor[[study]],
-           annotation_col = annotationb,
-           cluster_rows = T,
-           cluster_cols = T,
-           show_rownames = F,
-           show_colnames = F, 
-           main = paste0("BRETIGEA\nmarkers ",study))
-  dev.off()
-}
-
-rm(list=setdiff(ls(), "BRETIGEA"))
-
-############################################################################################################
-metadataall <- read.csv("../2resources/metadatall_predsex.csv")
-totalmatrix <- read.csv("../2resources/totalmatrix.csv", row.names=1)
-totalmatrix <- as.data.frame(totalmatrix)
-totalmatrix$Gene <- rownames(totalmatrix)
-
-studies <- unique((as.character(metadataall$GEO_series)))
-
-totalmatrix <- (t(totalmatrix))
-
-
-metastudy <- list()
-datExp <- list()
-
-ct <- readRDS("../3results/selectedMarkers_sc.rds")
-
-ct2 <- lapply(ct, bind_cols)
-ct2 <- lapply(ct2, function(x){
-  x<- as.data.frame(x)
-  x <- pivot_longer(x, -0, names_to="Cell", values_to="mkr")
-  x<- as.data.frame(x)
-  return(x)
-})
-
-
-
-for (n in as.character(studies)){
-  meta <- subset(metadataall, metadataall$GEO_series == n)
-  mt <- subset(totalmatrix, rownames(totalmatrix) %in% meta$ID)
-  mt <- as.data.frame(t(mt))
-  mt <- na.omit(mt)
-  mt[,1:ncol(mt)] <- as.matrix(sapply(na.omit(mt[,1:ncol(mt)]), as.character))  
-  mt[,1:ncol(mt)] <- as.matrix(sapply(na.omit(mt[,1:ncol(mt)]), as.numeric))  
-  metastudy[[paste(n, sep="")]] <- meta
-  datExp[[paste(n, sep="")]] <- as.data.frame(mt)
-  datExp[[paste(n, sep="")]] <- datExp[[paste(n, sep="")]][rownames(datExp[[paste(n, sep="")]]) %in% ct2[[n]]$mkr,]
-  rm(mt, meta)
-}
-
-
-datCor <- lapply(datExp, function(x)
-  x <- cor(t(x),t(x)))
-
-snsc <- list()
-
-for (study in names(ct)){
-  annotationb <- as.data.frame(ct2[[study]]) #
-  annotationb <- na.omit(annotationb)
-  rownames(annotationb) <- annotationb$mkr
-  annotationb$mkr <- NULL
-  names(annotationb) <- "Cell"
-  
-  tiff(paste0(study, "snsc.tiff"), units = "in", res = 300, height = 8, width = 8)  
-  pheatmap(datCor[[study]],
-           annotation_col = annotationb,
-           cluster_rows = T,
-           cluster_cols = T,
-           show_rownames = F,
-           show_colnames = F, 
-           main = paste0("snRNAseq\nmarkers ", study))
-  dev.off()
-}
-
-rm(list=ls())
-
+rm(list=setdiff(ls(), "celltypes"))
 #####################################################################
-################ Cellular proportions deconvolution #################
+################# General neurons vs Dopaminergic ###################
+#####################################################################
+# TH neurons
+celltypes <- readRDS("../3results/selectedMarkers.rds")
+metadataall <- read.csv("../2resources/metadatall_predsex.csv")
+totalmatrix <- read.csv("../2resources/totalmatrix.csv", row.names=1)
+totalmatrix$Gene <- rownames(totalmatrix)
+
+studies <- unique((as.character(metadataall$GEO_series)))
+
+totalmatrix <- (t(totalmatrix))
+
+metastudy <- list()
+datExp <- list()
+
+for (n in as.character(studies)){
+  meta <- subset(metadataall, metadataall$GEO_series == n)
+  mt <- subset(totalmatrix, rownames(totalmatrix) %in% meta$ID)
+  mt <- as.data.frame(t(mt))
+  mt <- na.omit(mt)
+  mt[,1:ncol(mt)] <- as.matrix(sapply(na.omit(mt[,1:ncol(mt)]), as.character))  
+  mt[,1:ncol(mt)] <- as.matrix(sapply(na.omit(mt[,1:ncol(mt)]), as.numeric))  
+  metastudy[[paste(n, sep="")]] <- meta
+  mt <- exp(mt)
+  ct <- as.character(unlist(celltypes[[n]]))
+  datExp[[paste(n, sep="")]] <- as.data.frame(mt)
+  rm(mt, meta)
+}
+
+for (n in names(celltypes)){
+  celltypes[[n]]$neu = c("TH", "SLC6A3") }
+
+
+resCB_TH <- list()
+for (n in names(datExp)){
+  resCB_TH[[n]] <- MDeconv(datExp[[n]], celltypes[[n]],
+                           epsilon = 1e-3, verbose = FALSE)$H
+  resCB_TH[[n]] <- as.data.frame(resCB_TH[[n]])
+}
+
+
+############################################################################################
+# Deconvolve again with BRETIGEA-markers
+celltypes <- readRDS("../3results/selectedMarkers.rds")
+metadataall <- read.csv("../2resources/metadatall_predsex.csv")
+totalmatrix <- read.csv("../2resources/totalmatrix.csv", row.names=1)
+totalmatrix$Gene <- rownames(totalmatrix)
+
+studies <- unique((as.character(metadataall$GEO_series)))
+
+totalmatrix <- (t(totalmatrix))
+
+metastudy <- list()
+datExp <- list()
+
+for (n in as.character(studies)){
+  meta <- subset(metadataall, metadataall$GEO_series == n)
+  mt <- subset(totalmatrix, rownames(totalmatrix) %in% meta$ID)
+  mt <- as.data.frame(t(mt))
+  mt <- na.omit(mt)
+  mt[,1:ncol(mt)] <- as.matrix(sapply(na.omit(mt[,1:ncol(mt)]), as.character))  
+  mt[,1:ncol(mt)] <- as.matrix(sapply(na.omit(mt[,1:ncol(mt)]), as.numeric))  
+  metastudy[[paste(n, sep="")]] <- meta
+  mt <- exp(mt)
+  ct <- as.character(unlist(celltypes[[n]]))
+  datExp[[paste(n, sep="")]] <- as.data.frame(mt)
+  rm(mt, meta)
+}
+
+resCB <- list()
+for (n in names(datExp)){
+  resCB[[n]] <- MDeconv(datExp[[n]], celltypes[[n]],
+                        epsilon = 1e-3, verbose = FALSE)$H
+  resCB[[n]] <- as.data.frame(resCB[[n]])
+}
+
+resCB2 <- as.data.frame(t(bind_cols(resCB)))
+resCB2$ID <- rownames(resCB2)
+resCB2 <- resCB2[, c("ID", "neu")]
+
+rm(list=setdiff(ls(), c("resCB", "resCB_TH")))
+
+
+resCB_TH = lapply(resCB_TH, function(x) x=x[rownames(x)=="neu",])
+resCB = lapply(resCB, function(x) x=x[rownames(x)=="neu",])
+
+resCB_TH = bind_rows(resCB_TH, .id="Study")
+resCB = bind_rows(resCB, .id="Study")
+
+resCB_TH = pivot_longer(resCB_TH, -"Study", values_to = "TH_neu", names_to = "ID")
+resCB = pivot_longer(resCB, -"Study", values_to = "Neu", names_to = "ID")
+resCB_TH = na.omit(resCB_TH)
+resCB = na.omit(resCB)
+
+
+neu_esti = merge(resCB, resCB_TH, by="ID")
+
+neu_esti <- neu_esti[, c("ID", "Neu", "TH_neu")]
+metadataall <- read.csv("../2resources/metadatall_predsex.csv")
+neu_esti <- merge(neu_esti, metadataall, by="ID")
+
+
+cor_list = numeric()
+for (i in unique(neu_esti$GEO_series)){
+  cor_list <- c(cor_list , cor(neu_esti[neu_esti$GEO_series==i,]$Neu,
+                               neu_esti[neu_esti$GEO_series==i,]$TH_neu, method = "pearson"))
+}
+
+mean(cor_list)
+sd(cor_list)
+
+rm(ls())
+#####################################################################
+################# Cellular proportion deconvolution #################
 #####################################################################
 celltypes <- readRDS("../3results/selectedMarkers.rds")
 metadataall <- read.csv("../2resources/metadatall_predsex.csv")
@@ -555,17 +536,17 @@ for (i in names(rc)){
 
 for (AGE_GEN in c("GSE20164","GSE20292", "GSE20333", "GSE8397")){
   rc[[AGE_GEN]] <- dplyr::select(rc[[AGE_GEN]], "ast", "end", "mic", "neu", "oli", "opc",
-                          "ID", "Status", "Age", "Gender")}
+                                 "ID", "Status", "Age", "Gender")}
 for (AGE_GEN_BRAAK in c("GSE43490", "GSE42966")){
   rc[[AGE_GEN_BRAAK]] <- dplyr::select(rc[[AGE_GEN_BRAAK]],  "ast", "end", "mic", "neu", "oli", "opc",
-                                "ID", "Status" , "Age", "Gender", "Braak"
+                                       "ID", "Status" , "Age", "Gender", "Braak"
   )}
 for (BRAAK_GEN in c("GSE49036")){
   rc[[BRAAK_GEN]] <- dplyr::select(rc[[BRAAK_GEN]],  "ast", "end", "mic", "neu", "oli", "opc",
-                        "ID", "Status", "Gender", "Braak")}
+                                   "ID", "Status", "Gender", "Braak")}
 for (GEN in c("GSE7621", "GSE20163")){
   rc[[GEN]] <- dplyr::select(rc[[GEN]], "ast", "end", "mic", "neu", "oli", "opc",
-                      "ID", "Status", "Gender")}
+                             "ID", "Status", "Gender")}
 
 
 
@@ -585,6 +566,7 @@ rc[["GSE49036"]]$Braak <- gsub("N/A", 1, rc[["GSE49036"]]$Braak)
 rc[["GSE49036"]]$Braak <- gsub(3.4, 3.5, rc[["GSE49036"]]$Braak)
 rc[["GSE49036"]]$Braak <- gsub(5.6, 5.5, rc[["GSE49036"]]$Braak)
 rc[["GSE49036"]]$Braak <- ifelse(is.na(rc[["GSE49036"]]$Braak ), 1, rc[["GSE49036"]]$Braak)
+
 
 
 lm <- list()
@@ -630,11 +612,11 @@ for (study in names(rc)){
 
 
 p$GSE20163_ast <- p$GSE20163_ast + ggtitle("Astrocytes")
-p$GSE20163_end <- p$GSE20163_end + ggtitle("Endothelial Cells")
-p$GSE20163_mic <- p$GSE20163_mic + ggtitle("Microglia")
-p$GSE20163_neu <- p$GSE20163_neu+ ggtitle("Neurons")
-p$GSE20163_oli <- p$GSE20163_oli + ggtitle("ODCs")
-p$GSE20163_opc <- p$GSE20163_opc + ggtitle("OPCs") 
+p$GSE20163_end <- p$GSE20163_ast + ggtitle("Endothelial Cells")
+p$GSE20163_mic <- p$GSE20163_ast + ggtitle("Microglia")
+p$GSE20163_neu <- p$GSE20163_ast+ ggtitle("Neurons")
+p$GSE20163_oli <- p$GSE20163_ast + ggtitle("ODCs")
+p$GSE20163_opc <- p$GSE20163_ast + ggtitle("OPCs") 
 p$GSE20163_ast<- p$GSE20163_ast + ylab("GSE20163")
 p$GSE20164_ast <- p$GSE20164_ast + ylab("GSE20164")
 p$GSE20292_ast <- p$GSE20292_ast + ylab("GSE20292")
@@ -839,18 +821,15 @@ dev.off()
 
 ###########################################################################
 # Meta-analysis of the estimates
-res2 <- bind_cols(resCB)
+res2 <- rc3
 res2$cell <- rownames(res2)
-res2 <- pivot_longer(res2, -"cell", names_to = "ID", values_to = "Estimate")
-metadataall <- read.csv("../2resources/metadatall_predsex.csv")
-res2 <- merge(res2, metadataall, by="ID")
 
 # Random-effects model 
-rmdf <- dplyr::select(res2, "ID", "cell", "Estimate", "GEO_series", "Status")
+rmdf <- dplyr::select(res2, "GEO_Study", "Cell", "Value", "GEO_Study", "Status")
 rmdf <- res2 %>%
-  group_by(GEO_series, cell, Status) %>%
-  summarise(Average = mean(Estimate),
-            SD = sd(Estimate), 
+  group_by(GEO_Study, Cell, Status) %>%
+  summarise(Average = mean(Value),
+            SD = sd(Value), 
             n=n())
 
 #Function to reoganize for CTRL and PD for metafor 
@@ -876,7 +855,7 @@ df <- data.frame(t(sapply(effects,c)))
 df <- as.data.frame(df)
 
 selection <- dplyr::select(df, 0, b, beta, k, se, zval, pval, ci.lb, 
-                    ci.ub, tau2, se.tau2, QE, QEp, I2, H2)
+                           ci.ub, tau2, se.tau2, QE, QEp, I2, H2)
 selection <- as.data.frame(selection)
 selection$pBH <- NA 
 selection$pBH <- p.adjust(selection$pval, "BH")
@@ -910,6 +889,7 @@ selection$ci.ub <- as.numeric(as.character(selection$ci.ub))
 selection$ci.lb <- as.numeric(as.character(selection$ci.lb))
 selection$b <- as.numeric(as.character(selection$b))
 selection$errorbar <- ifelse(selection$b>0,selection$b+selection$se, selection$b-selection$se)
+selection$lab <- gsub("\n", " ", selection$lab)
 
 
 tiff("../4plots/Figure1C.tiff", width = 5, height = 3.5, units = 'in', res = 300)
@@ -926,22 +906,19 @@ ggplot(selection, aes(lab, b, fill=lab)) +
   xlab("")+
   ylab("Effect Size")+
   geom_text(data=selection,aes(x=lab, y=0, label=text_NEU), size=3.2, hjust=1, vjust=0)+
-  # geom_text(data=selection,aes(x=ifelse(lab %in% c("Neurons", "ODCs", "Endothelial Cells"), lab, NA), 
-  #                              y=ifelse(errorbar>0,errorbar+.03,errorbar-.03), label="*"),
-  #                               size=9)+
-  geom_text(data=selection,aes(x=lab, y=0, label=text_ALL), size=3.2, hjust=0, vjust=0)+
+  geom_text(data=selection,aes(x=lab, y=0, label=ifelse(text_ALL=="Endothelial\nCells", "Endothelial Cells", text_ALL)), size=3.2, hjust=0, vjust=0)+
   geom_text(data=selection,aes(x=ifelse(lab=="Neurons", lab, NA ), y=0, label=paste0("(BHp=",signif(pBH,2), ")")),
             hjust=1, size=2, vjust=1.5)+
   geom_text(data=selection,aes(x=ifelse(lab!="Neurons", lab, NA ), y=0, label=paste0("(BHp=",signif(pBH,2), ")")), 
             hjust=0, size=2, vjust=1.5)
 dev.off()
 
+
 library(openxlsx)
 
 write.xlsx(selection, file = "../3results/cellprop_metafor.xlsx")
 
 rm(list=setdiff(ls(), ""))
-
 
 ##########################################################################
 ####################### cell-proportions unaware DEGs ####################
@@ -956,8 +933,8 @@ totalmatrix <- pivot_longer(totalmatrix, -"Gene", names_to = "ID", values_to = "
 totalmatrix <- na.omit(totalmatrix)
 lng <- merge(totalmatrix, metadataall, by="ID")
 rm(totalmatrix)
-lost <- read.csv("lost.csv")
-lng <- lng[lng$Gene %in% lost$x, ]
+
+
 #####################################################################################
 # DEGs identification original
 mixed <- singular <- list()
@@ -988,10 +965,7 @@ mixed2 <- mixed2[!(mixed2$Gene %in% as.data.frame(t(singfilt))$V1), ]
 
 mixed2 <- split(mixed2, as.factor(mixed2$term))
 mixed2 <- mixed2$Status1
-mixed2$pBH <- p.adjust(mixed2$p.value, method = "BH")
 write.csv2(mixed2, "../3results/originalDEGs.csv")
-mixed2_f <- subset(mixed2, mixed2$pBH < 0.05)
-original <- mixed2_f
 
 rm(list=setdiff(ls(), "original"))
 
@@ -1073,7 +1047,6 @@ resCB2 <- as.data.frame(t(resCB2))
 resCB2$ID <- rownames(resCB2)
 lng <- subset(lng, lng$Gene %in% lng2$Gene )
 
-
 mixed <- singular <- list()
 # DEGs identification original
 for (i in unique(lng$Gene)){
@@ -1083,7 +1056,7 @@ for (i in unique(lng$Gene)){
   slng$Status <- as.factor(slng$Status)
   mixed[[i]] <- list()
   
-  Formula <- formula(Value ~ 1+ Status+neu+oli+opc+Sex+ (1|GEO_series))
+  Formula <- formula(Value ~ 1+ Status+neu+oli+Sex+ (1|GEO_series))
   lmix <- lmer(Formula, 
                data=slng, REML = FALSE)
   
@@ -1104,43 +1077,47 @@ mixed2 <- mixed2$Status1
 mixed2$pBH <- p.adjust(mixed2$p.value, method = "BH")
 mixed2_f <- subset(mixed2, mixed2$pBH < 0.05)
 write.csv2(mixed2, "../3results/correctedDEGs.csv")
-correctedDEGs  <- subset(correctedDEGs , correctedDEGs $pBH < 0.05)
-correctedDEGs  <- subset(correctedDEGs, abs(correctedDEGs$estimate) > log(1.2) )
-write.csv2(correctedDEGs, "../3results/correctedDEGs.csv")
+correctedDEGs  <- subset(mixed2_f , mixed2_f $pBH < 0.05)
+correctedDEGs  <- subset(mixed2_f, abs(mixed2_f$estimate) > log(1.2) )
+
 rm(list=setdiff(ls(), "resCB"))
 
 
 ###########################################################################
 # Expression plots comparison before and after cell-proportion adjustments 
 load("../3results/Corrected.RData")
-  corrected <- lng
-  rm(list=setdiff(ls(), c("corrected")))
-  
-correctedDEGs <- read.csv2("../3results/correctedDEGs.csv", row.names=1)
+corrected <- lng
+correctedDEGs <- bind_rows(mixed, .id="Gene")
+correctedDEGs <- split(correctedDEGs, as.factor(correctedDEGs$term))
+correctedDEGs <- correctedDEGs$Status1
+correctedDEGs$pBH <- p.adjust(correctedDEGs$p.value, method = "BH")
 correctedDEGs <- correctedDEGs[abs(correctedDEGs$estimate)>log(1.2) & correctedDEGs$pBH<0.05, ]
+
+rm(list=setdiff(ls(), c("corrected", "correctedDEGs")))
+
 
 corrected$Corrected <- ""
 corrected$Original <- ""
-  
+
 corrected$Gene <- as.character(corrected$Gene)
-corrected <- corrected[as.character(corrected$Gene) %in% correctedDEGs$Gene,]
+corrected <- corrected[as.character(corrected$Gene) %in% c("CHD9", "CLK4", "OXTR", "SYN2"),]
 
 for (i in unique(correctedDEGs$Gene)){
-    print(i)
-    corrected2 <- corrected[as.character(corrected$Gene) ==i,]
-    
-    corrected2$Status <- ifelse(corrected2$Status=="PD", 1, 0)
-    corrected2$Sex <- ifelse(corrected2$Sex=="M", 1, 0)
-    corrected2$Status <- as.factor(corrected2$Status)
-    corrected2$Sex <- as.factor(corrected2$Sex)
-    
-    corrected2 <- split(corrected2, as.factor(corrected2$GEO_series))
-    
-    
-    for (study in names(corrected2)){
-    Formula <- formula(Value ~ neu+oli+opc+as.factor(Sex))
+  print(i)
+  corrected2 <- corrected[as.character(corrected$Gene) ==i,]
+  
+  corrected2$Status <- ifelse(corrected2$Status=="PD", 1, 0)
+  corrected2$Sex <- ifelse(corrected2$Sex=="M", 1, 0)
+  corrected2$Status <- as.factor(corrected2$Status)
+  corrected2$Sex <- as.factor(corrected2$Sex)
+  
+  corrected2 <- split(corrected2, as.factor(corrected2$GEO_series))
+  
+  
+  for (study in names(corrected2)){
+    Formula <- formula(Value ~ neu+oli+as.factor(Sex))
     lmix <- lm(Formula, 
-                 data=corrected2[[study]])
+               data=corrected2[[study]])
     corrected$Corrected <-ifelse(corrected$Gene==i & corrected$GEO_series==study, resid(lmix), corrected$Corrected)
     
     Formula <- formula(Value ~ as.factor(Sex))
@@ -1149,16 +1126,16 @@ for (i in unique(correctedDEGs$Gene)){
     corrected$Original <-ifelse(corrected$Gene==i & corrected$GEO_series==study, resid(lmix) ,corrected$Original)
     
     
-    }
-    
-    } 
+  }
   
-  
+} 
+
+
 rm(list=setdiff(ls(), c("corrected", "c_sp", "o_sp")))
 corrected$Original <- as.numeric(as.character(corrected$Original)) 
 corrected$Corrected <- as.numeric(as.character(corrected$Corrected)) 
-  
-  
+
+
 corrected <- corrected[!is.na(corrected$Corrected),]
 
 library("tidyverse")
@@ -1166,52 +1143,52 @@ corrected <- corrected[, c("ID", "Gene", "GEO_series", "Status", "Original", "Co
 lc <- pivot_longer(corrected, -c("ID", "Gene", "Status", "GEO_series"), values_to="Value", names_to = "Model")
 lc <- na.omit(lc)
 library("ggpubr")
-  
+
 # Function for split violins
 GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, 
-                             draw_group = function(self, data, ..., draw_quantiles = NULL) {
-                               data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
-                               grp <- data[1, "group"]
-                               newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
-                               newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
-                               newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
-                               
-                               if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
-                                 stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
-                                                                           1))
-                                 quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
-                                 aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
-                                 aesthetics$alpha <- rep(1, nrow(quantiles))
-                                 both <- cbind(quantiles, aesthetics)
-                                 quantile_grob <- GeomPath$draw_panel(both, ...)
-                                 ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
-                               }
-                               else {
-                                 ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
-                               }
-                             })
-  
+                           draw_group = function(self, data, ..., draw_quantiles = NULL) {
+                             data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+                             grp <- data[1, "group"]
+                             newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
+                             newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+                             newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
+                             
+                             if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+                               stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
+                                                                         1))
+                               quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
+                               aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+                               aesthetics$alpha <- rep(1, nrow(quantiles))
+                               both <- cbind(quantiles, aesthetics)
+                               quantile_grob <- GeomPath$draw_panel(both, ...)
+                               ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+                             }
+                             else {
+                               ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+                             }
+                           })
+
 geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., 
-                                draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, 
-                                show.legend = NA, inherit.aes = TRUE) {
-    layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, 
-          position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
-          params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
-  }
-  
-  
+                              draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, 
+                              show.legend = NA, inherit.aes = TRUE) {
+  layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, 
+        position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
+        params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
+}
+
+
 ##################################################################################################
-  
+
 lc$Model <- as.character(lc$Model)
 lc$Model <- factor(lc$Model, levels = c("Original", "Corrected"))
-  
+
 # lc$Value <- exp(lc$Value)
-  
+
 for(i in unique(corrected$Gene)){
   tiff(paste0("../4plots/singleexp/",i,".tiff"), units="in", res=300, 9, 3)
   plot(  
-  ggplot(lc[as.character(lc$Gene) ==i,], aes(y=Value, x=Status, fill=Model))+ geom_split_violin(alpha=0.5)+
-    facet_grid(cols=vars(GEO_series), scales = "free")+
+    ggplot(lc[as.character(lc$Gene) ==i,], aes(y=Value, x=Status, fill=Model))+ geom_split_violin(alpha=0.5)+
+      facet_grid(cols=vars(GEO_series), scales = "free")+
       stat_summary(fun=mean, geom="point", shape=23, size=2)+
       ggtitle(paste(i))+
       theme(legend.position = "none",
@@ -1219,7 +1196,9 @@ for(i in unique(corrected$Gene)){
             axis.text.x = element_text(size = 4),
             axis.text.y = element_text(size = 4))+
       theme_classic()+
-     scale_fill_manual(values=c("coral1", "royalblue"))
+      scale_fill_manual(values=c("coral1", "royalblue"))
   )
-    dev.off()
+  dev.off()
 }
+
+#####################################################################################################

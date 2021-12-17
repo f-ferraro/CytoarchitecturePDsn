@@ -2,8 +2,8 @@
 #################### Sample download ########################
 #############################################################
 
-library("GEOquery")
-library("tidyverse")
+library(GEOquery)
+library(tidyverse)
 
 dn <- getGEO(GEO='GSE42966', GSEMatrix = TRUE)
 GSE42966 <- dn[["GSE42966_series_matrix.txt.gz"]]@assayData[["exprs"]]

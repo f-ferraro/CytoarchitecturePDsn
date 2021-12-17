@@ -57,23 +57,23 @@ SNC <- RunTSNE(object = SNC, dims.use = 1:25, do.fast = TRUE)
 TSNEPlot(object = SNC)
 SNC.markers <- FindAllMarkers(object = SNC, only.pos = TRUE, min.pct = 0.30,
                               thresh.use = 0.5)
-goi <- c("GFAP", "GINS3", "MOBP", "GINS3", "TH", "SLC6A3",  "GABRA1", "GABRA2",
-         "GAD1", "GAD2", "RGS5", "MOG", "OLR1", "CSF1R", "PPM1G", "LGALS1", "PALM2","VCAN")
+goi <- c("GFAP", "GINS3", "MOBP", "TH", "SLC6A3",  "GABRA1", "GABRA2",
+         "GAD1", "GAD2", "RGS5", "MOG", "OLR1", "CSF1R", "LGALS1", "VCAN")
 goi <- unique(as.character(goi))
 DotPlot(SNC,genes.plot = (goi))
 
-current.cluster.ids <- c(0, 1, 2, 3, 4, 5, 6, 7, 8)
-new.cluster.ids <- c("ODC", #0
+c <- c(0, 1, 2, 3, 4, 5, 6, 7, 8)
+new.id <- c("ODC", #0
                      "ODC", #1
                      "ODC", #2
                      "Astrocyte", #3
                      "Microglia", #4
                      "OPC", #5
-                     "Neuron", #6DaNs
+                     "DaNs", #6DaNs
                      "Endothelial", #7
-                     "Neuron") #8 GABA
-names(new.cluster.ids) <- levels(SNC)
-SNC@ident <- plyr::mapvalues(x = SNC@ident, from = current.cluster.ids, to = new.cluster.ids)
+                     "GABA") #8 GABA
+names(new.id) <- levels(SNC)
+SNC@ident <- plyr::mapvalues(x = SNC@ident, from = c, to = new.id)
 TSNEPlot(object = SNC, do.label = TRUE, pt.size = 0.5)
 
 l1 <- as.list(SNC@ident)
@@ -81,30 +81,40 @@ l1 <- lapply(l1, as.character)
 l1 <- as.character(SNC@ident)
 l1 <- list(l1, l1)
 exp <- as.data.frame(SNC@scale.data)
-gcd <- generate.celltype.data(exp,
+gcd <- generate_celltype_data(exp,
                               l1,
-                              "SNCA",
+                              "SN",
                               )
 
+
+smr = AverageExpression(SNC)
+write.table(smr, "../2resources/averageexpression.tsv")
 mydf <- read.delim2("../2resources/averageexpression.tsv", row.names = 1)
-# mydf <- log2(mydf)
-# mydf[mydf=="-Inf"] <- 0
+
 l1 <- as.character(names(mydf))
 l1 <- list(l1, l1)
-gcd <- generate.celltype.data(mydf,
+gcd <- generate_celltype_data(mydf,
                               l1,
                               "SN")
 load("../2resources/CellTypeData_SN.rda")
-corrected <- read.csv2("~/Scrivania/eNeuro/3results/correctedDEGs.csv", row.names=1)
+load("../3results/Corrected.RData")
+mixed2 <- mixed
+mixed2 <- bind_rows(mixed2, .id="Gene")
+mixed2 <- split(mixed2, as.factor(mixed2$term))
+mixed2 <- mixed2$Status1
+mixed2$pBH <- p.adjust(mixed2$p.value, method = "BH")
+corrected <- mixed2
+corrected = corrected[corrected$pBH<0.05,]
+corrected = corrected[abs(corrected$estimate)>log(1.2),]
 corrected$HGNC.symbol <- corrected$Gene
-corrected <- corrected[corrected$pBH<0.05 &abs(corrected$estimate)>log(1.2),]
+
 corrected <- corrected[corrected$HGNC.symbol %in% rownames(mydf),]
 corrected$Gene <- as.character(corrected$Gene)
 rm(list=setdiff(ls(), c("dnDEG", "upDEG", "ctd","corrected")))
 
 ##############################################################
 # EWCE plot DEGs
-full_res_up = EWCE::bootstrap.enrichment.test(sct_data = ctd, 
+full_res_up = EWCE::bootstrap_enrichment_test(sct_data = ctd, 
                                               hits = corrected[corrected$estimate>log(1.2) &
                                                                  corrected$pBH<0.05,]$Gene, 
                                               bg = rownames(ctd[[1]][["mean_exp"]]),
@@ -114,7 +124,7 @@ full_res_up = EWCE::bootstrap.enrichment.test(sct_data = ctd,
                                               genelistSpecies = "human", 
                                               sctSpecies = "human")
 
-full_res_down = EWCE::bootstrap.enrichment.test(sct_data = ctd, 
+full_res_down = EWCE::bootstrap_enrichment_test(sct_data = ctd, 
                                                 hits = corrected[corrected$estimate<log(1.2) &
                                                                    corrected$pBH<0.05,]$Gene, 
                                                 bg = rownames(ctd[[1]][["mean_exp"]]),
@@ -149,16 +159,23 @@ ggplot(joint_results, aes(x=CellType, y=abs(sd_from_mean), fill=Direction, fill=
         legend.title = element_text(color = "blue", size = 0))
 dev.off()
 
-joint_results
 
 library(openxlsx)
 
-write.xlsx(joint_results, file = "../3results/EDT3-1.xlsx")
+write.xlsx(joint_results, file = "../3results/EDT3-1.xlsx", overwrite = T)
 #############################################################
 # Plot heatmap preferential expression
 mydf <- read.delim2("../2resources/averageexpression.tsv", row.names = 1)
-corrected <- read.csv2("~/Scrivania/eNeuro/3results/correctedDEGs.csv", row.names=1)
-corrected <- corrected[corrected$pBH<0.05 &abs(corrected$estimate)>log(1.2),]
+load("../3results/Corrected.RData")
+mixed2 <- mixed
+mixed2 <- bind_rows(mixed2, .id="Gene")
+mixed2 <- split(mixed2, as.factor(mixed2$term))
+mixed2 <- mixed2$Status1
+mixed2$pBH <- p.adjust(mixed2$p.value, method = "BH")
+corrected <- mixed2
+corrected = corrected[corrected$pBH<0.05,]
+corrected = corrected[abs(corrected$estimate)>log(1.2),]
+corrected$HGNC.symbol <- corrected$Gene
 corrected$Gene <- as.character(corrected$Gene)
 corrected$HGNC.symbol <- corrected$Gene
 corrected <- corrected[corrected$HGNC.symbol %in% rownames(mydf),]
@@ -332,7 +349,7 @@ write.xlsx(compar, file = "../3results/ST2_GSEA_comparison.xlsx")
 rm(list = ls())
 ##############################################################################
 # Plots
-x <- read_excel("../3results/ST2_GSEA_comparison.xlsx", 
+x <- readxl::read_excel("../3results/ST2_GSEA_comparison.xlsx", 
                 sheet = "canonical")
 names(x) <- gsub("CellAware", "corrected", names(x))
 names(x) <- gsub("CellUnaware", "original", names(x))
@@ -484,3 +501,39 @@ ggplot(x) +
   scale_color_gradient2(low = "#008b45e5", high = "#bb0021e5",  limit = c(-2.5,2.5)) + labs(colour = "NES") 
 
 dev.off()
+
+#############################################################################################################
+load("../3results/Original.RData")
+mixed2 <- mixed
+mixed2 <- bind_rows(mixed2, .id="Gene")
+singfilt <- bind_rows(singular, .id="Gene")
+mixed2 <- mixed2[!(mixed2$Gene %in% as.data.frame(t(singfilt))$V1), ]
+mixed2 <- split(mixed2, as.factor(mixed2$term))
+mixed2 <- mixed2$Status1
+mixed2$pBH <- p.adjust(mixed2$p.value, method = "BH")
+original <- mixed2
+rm(list=setdiff(ls(), c("corrected","original", "resCB", "resCB2")))
+
+load("../3results/Corrected.RData")
+mixed2 <- mixed
+mixed2 <- bind_rows(mixed2, .id="Gene")
+singfilt <- bind_rows(singular, .id="Gene")
+mixed2 <- mixed2[!(mixed2$Gene %in% as.data.frame(t(singfilt))$V1), ]
+mixed2 <- split(mixed2, as.factor(mixed2$term))
+mixed2 <- mixed2$Status1
+mixed2$pBH <- p.adjust(mixed2$p.value, method = "BH")
+corrected <- mixed2
+rm(list=setdiff(ls(), c("corrected","original")))
+
+corrected = corrected[corrected$Gene %in% original$Gene, ]
+original = original[original$Gene %in% corrected$Gene, ]
+
+# original = original[original$pBH<0.05,]
+# corrected = corrected[corrected$pBH<0.05,]
+# 
+# original = original[abs(original$estimate)>log(1.2),]
+# corrected = corrected[abs(corrected$estimate)>log(1.2),]
+
+openxlsx::write.xlsx(Hmisc::llist(original, corrected), "../3results/DEGs_twomodels.xlsx", overwrite = T)
+
+                     

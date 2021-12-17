@@ -10,22 +10,20 @@ library("patchwork")
 library("GEOquery")
 
 mydf <- read.delim2("../2resources/averageexpression.tsv", row.names = 1)
-# mydf <- log2(mydf)
-# mydf[mydf=="-Inf"] <- 0
 l1 <- as.character(names(mydf))
 l1 <- list(l1, l1)
-gcd <- generate.celltype.data(mydf,
+gcd <- generate_celltype_data(mydf,
                               l1,
                               "SN")
 load("../2resources/CellTypeData_SN.rda")
 
 # CentralProteins 
-cp<- read.table("../3results/centralproteins.txt", quote="\"", comment.char="")
+cp<- read.table("../5_PPI_API/cleaned/centralproteins.txt", quote="\"", comment.char="")
 cp <- cp[as.character(cp$V1) %in% rownames(ctd[[1]][["mean_exp"]]),]
 cp <- as.character(cp)
 # EWCE plot
 ppilist <- list()
-ppilist[["centralproteins"]] = EWCE::bootstrap.enrichment.test(sct_data = ctd, 
+ppilist[["centralproteins"]] = EWCE::bootstrap_enrichment_test(sct_data = ctd, 
                                                                hits = as.character(cp), 
                                                                bg = rownames(ctd[[1]][["mean_exp"]]),
                                                                reps = 10000, 
@@ -40,9 +38,9 @@ ppilist[["centralproteins"]]$BHp <- p.adjust(ppilist[["centralproteins"]]$p, met
 ## Full Network 
 # CentralProteins 
 # EWCE plot
-ppiall <- read.csv("../3results/nodes_centrality.csv", row.names=1)
+ppiall <- read.csv("../5_PPI_API/cleaned/nodes_centrality.csv", row.names=1)
 ppiall <- ppiall[as.character(ppiall$Row.names) %in% rownames(ctd[[1]][["mean_exp"]]),]
-ppilist[["full"]] = EWCE::bootstrap.enrichment.test(sct_data = ctd, 
+ppilist[["full"]] = EWCE::bootstrap_enrichment_test(sct_data = ctd, 
                                                     hits = as.character(ppiall$Row.names), 
                                                     bg = rownames(ctd[[1]][["mean_exp"]]),
                                                     reps = 10000, 
@@ -100,16 +98,16 @@ dev.off()
 
 
 library("openxlsx")
-write.xlsx(ppilist2, file = "../3results/EDT3-2.xlsx")
+write.xlsx(ppilist2, file = "../5_PPI_API/cleaned/EDT3-2.xlsx", overwrite = T)
 
 
 #############################################################
-############ GSEA beweenness-ordered PPI network  ###########
+########### GSEA betweenness-ordered PPI network  ###########
 #############################################################
 
 library("biomaRt")
 library("fgsea")
-ensembl <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+ensembl <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl")
 canonical <- gmtPathways('../2resources/canonical_all.gmt')
 GOBP <- gmtPathways('../2resources/GOBP.gmt')
 GOMF <- gmtPathways('../2resources/GOMF.gmt')
@@ -133,16 +131,16 @@ names(ranks) <- nodes_centrality$ENTREZ
 annot <- Hmisc::llist(GOCC, GOBP, GOMF, canonical)
 gsea <- list()
 for (i in names(annot)){
-  gsea[[i]] <- fgsea(annot[[i]], ranks,  minSize = 25, maxSize=500, nperm=100000)
+  gsea[[i]] <- fgsea(annot[[i]], ranks,  minSize = 25, maxSize=500, nperm=100000,scoreType = "pos")
   gsea[[i]]$padj <- p.adjust(gsea[[i]]$pval, method = "BH")
 }
 
 library(openxlsx)
-write.xlsx(gsea, file = paste0("../3results/GSEA_PPI.xlsx"))
+write.xlsx(gsea, file ="../5_PPI_API/cleaned/GSEA_PPI.xlsx", overwrite = T)
 ###########################################################################
 # PPI GSEA plots
 library(readxl)
-x <- read_excel("../3results/GSEA_PPI.xlsx", 
+x <- read_excel("../5_PPI_API/cleaned/GSEA_PPI.xlsx", 
                 sheet = "canonical")
 
 library("ggplot2")
@@ -179,7 +177,7 @@ dev.off()
 
 ############################################################################################
 library(readxl)
-x <- read_excel("../3results/GSEA_PPI.xlsx", 
+x <- read_excel("../5_PPI_API/cleaned/GSEA_PPI.xlsx", 
                 sheet = "GOCC")
 
 library("ggplot2")
@@ -215,7 +213,7 @@ dev.off()
 
 ############################################################################################
 library(readxl)
-x <- read_excel("../3results/GSEA_PPI.xlsx", 
+x <- read_excel("../5_PPI_API/cleaned/GSEA_PPI.xlsx", 
                 sheet = "GOMF")
 
 library("ggplot2")
@@ -250,7 +248,7 @@ ggplot(x) +
 dev.off()
 ############################################################################################
 library(readxl)
-x <- read_excel("../3results/GSEA_PPI.xlsx", 
+x <- read_excel("../5_PPI_API/cleaned/GSEA_PPI.xlsx", 
                 sheet = "GOBP")
 
 library("ggplot2")
@@ -288,26 +286,26 @@ dev.off()
 #############################################################
 ####### FET PPI/Central Proteins with PD/GWAS genes #########
 #############################################################
-nalls2019_gwas_catalog <- read.delim("../../2resources/nalls2019_gwas_catalog.tsv")
+nalls2019_gwas_catalog <- read.delim("../2resources/nalls2019_gwas_catalog.tsv")
 nalls2019_gwas_catalog <- unique(nalls2019_gwas_catalog$REPORTED.GENE.S.)
-EDT4_1_xlsx <- read_excel("../3results/EDT4-1.xlsx")
-EDT4_1_xlsx <- EDT4_1_xlsx$Node
+wholenet <- read.csv("../5_PPI_API/cleaned/nodes_centrality.csv", row.names = 1)
+wholenet <- wholenet$Row.names
 
 library(GeneOverlap)
 # Number of protein coding genes https://www.ncbi.nlm.nih.gov/genome/annotation_euk/Homo_sapiens/109/
 # GWAS proximal vs whole network 
-go.obj <- newGeneOverlap(EDT4_1_xlsx,
+go.obj <- newGeneOverlap(wholenet,
                          nalls2019_gwas_catalog,
-                         genome.size = 20203
-)
+                         genome.size = 20203)
 go.obj <- testGeneOverlap(go.obj)
 go.obj
 
 
-nalls2019_gwas_catalog <- read.delim("../../2resources/nalls2019_gwas_catalog.tsv")
-EDT4_1_xlsx <- read_excel("~/Desktop/eNeuro/manuscript/EDT4-1.xlsx.xlsx")
-background <- EDT4_1_xlsx$Node
-cp <- EDT4_1_xlsx$Central_Proteins
+nalls2019_gwas_catalog <- read.delim("../2resources/nalls2019_gwas_catalog.tsv")
+wholenet <- read.csv("../5_PPI_API/cleaned/nodes_centrality.csv")
+background <- wholenet$Row.names
+cp <- read.table("../5_PPI_API/cleaned/centralproteins.txt") 
+cp <- cp$V1
 
 nalls2019_gwas_catalog <- nalls2019_gwas_catalog[nalls2019_gwas_catalog$REPORTED.GENE.S. %in% 
                                                    background,]$REPORTED.GENE.S.
@@ -315,25 +313,26 @@ nalls2019_gwas_catalog <- nalls2019_gwas_catalog[nalls2019_gwas_catalog$REPORTED
 
 # GWAS proximal vs Central proteins 
 go.obj <- newGeneOverlap(cp,
-                         intersect(nalls2019_gwas_catalog, EDT4_1_xlsx$Node),
-                         genome.size = 5615)
+                         nalls2019_gwas_catalog,
+                         genome.size = 5705)
 go.obj <- testGeneOverlap(go.obj)
 go.obj
 
+intersect(cp, nalls2019_gwas_catalog)
 ########################################################################
 PDg = c("LRRK2", "SNCA", "PARK7", "VPS35",  "PRKN", "PINK1")
+wholenet <- read.csv("../5_PPI_API/cleaned/nodes_centrality.csv")
 # PD genes vs whole network  
-go.obj <- newGeneOverlap(EDT4_1_xlsx$Node,
+go.obj <- newGeneOverlap(wholenet$Row.names,
                          PDg,
-                         genome.size=20203
-)
+                         genome.size=20203)
 go.obj <- testGeneOverlap(go.obj)
 go.obj
 
 # PD genes vs central proteins  
 go.obj <- newGeneOverlap(cp,
-                         intersect(EDT4_1_xlsx$Node, PDg),
-                         genome.size=5615)
+                         PDg,
+                         genome.size=5705)
 go.obj <- testGeneOverlap(go.obj)
 go.obj
 
